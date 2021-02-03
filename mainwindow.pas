@@ -10,9 +10,10 @@ uses
 
 type
   TUpdateStatusThread = class(TThread)
+  public
+    Version: String;
   private
     Running: Boolean;
-    Version: String;
     procedure ShowStatus;
   protected
     procedure Execute; override;
@@ -20,6 +21,7 @@ type
 
   TUpdateThread = class(TThread)
   private
+    Updated: Boolean;
     procedure Done;
   protected
     procedure Execute; override;
@@ -88,14 +90,6 @@ begin
   Reg:=TRegistry.Create;
   Reg.RootKey:=HKEY_CURRENT_USER;
 
-  Reg.OpenKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Run', True);
-  if Reg.ValueExists('TorController') then
-  begin
-    CheckBoxStartup.Checked:=True;
-    StartTor;
-  end;
-
-  Reg.CloseKey;
   Reg.OpenKey('SOFTWARE\memstream\TorController', True);
   if not Reg.ValueExists('AutoUpdate') then
     Reg.WriteBool('AutoUpdate', False);
@@ -106,12 +100,21 @@ begin
   LabelUpdate.Caption:=Reg.ReadString('LastUpdate');
 
   UpdateTorThread:=TUpdateThread.Create(True);
+  TorThread:=TTorThread.Create(True);
   UpdateThread:=TUpdateStatusThread.Create(False);
 
   if Reg.ReadBool('AutoUpdate') then
   begin
     CheckBoxUpdate.Checked:=True;
     CheckTorUpdate;
+  end;
+
+  Reg.CloseKey;
+  Reg.OpenKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Run', True);
+  if Reg.ValueExists('TorController') then
+  begin
+    CheckBoxStartup.Checked:=True;
+    StartTor;
   end;
 end;
 
@@ -146,6 +149,10 @@ begin
   if TorRunning then
   begin
     TorStop;
+    TorThread.Free;
+    UpdateTorThread.Free;
+    TorThread:=TTorThread.Create(True);
+    UpdateTorThread:=TUpdateThread.Create(True);
   end
   else
   begin
@@ -194,9 +201,11 @@ begin
   if not FileExists(TorBaseFolder+'\tor\Tor\tor.exe') then
   begin
     CheckTorUpdate;
+  end
+  else
+  begin
+    TorThread.Resume;
   end;
-
-  TorThread:=TTorThread.Create(False);
 end;
 
 procedure TMainForm.CheckTorUpdate;
@@ -237,13 +246,21 @@ procedure TUpdateThread.Done;
 var
   Reg: TRegistry;
 begin
-  Reg:=TRegistry.Create();
-  Reg.RootKey:=HKEY_CURRENT_USER;
-  Reg.OpenKey('SOFTWARE\memstream\TorController', True);
-  Reg.WriteString('LastUpdate', DateToStr(Now));
-  Reg.Free;
+  if Updated then
+  begin
+    Reg:=TRegistry.Create();
+    Reg.RootKey:=HKEY_CURRENT_USER;
+    Reg.OpenKey('SOFTWARE\memstream\TorController', True);
+    Reg.WriteString('LastUpdate', DateToStr(Now));
+    Reg.Free;
 
-  MainForm.LabelUpdate.Caption:=DateToStr(Now);
+    MainForm.LabelUpdate.Caption:=DateToStr(Now);
+
+    if MainForm.TorThread.Suspended then
+      MainForm.TorThread.Resume;
+
+    MainForm.UpdateThread.Version:=TorVersion;
+  end;
   MainForm.LabelVersion.Caption:=TorVersion;
 end;
 
@@ -251,9 +268,8 @@ procedure TUpdateThread.Execute;
 var
   CurrVersion: String;
 begin
+  Updated:=False;
   CurrVersion:=TorCurrentVersion(TorCurrentLink);
-  if (FileExists(TorBaseFolder + 'tor\Tor\tor.exe')) and (TorVersion = CurrVersion) then
-    Exit;
 
   if CurrVersion = '' then
   begin
@@ -261,7 +277,13 @@ begin
     Exit;
   end;
 
-  TorUpdate;
+  if (not FileExists(TorBaseFolder + 'tor\Tor\tor.exe')) or (TorVersion <> CurrVersion) then
+  begin
+    ShowMessage('Updaing...');
+    Updated:=True;
+    TorUpdate;
+  end;
+
   Synchronize(@Done);
 end;
 
@@ -291,6 +313,7 @@ begin
       Synchronize(@PrintStdOut);
     if not AProcess.Running then
       break;
+    Sleep(250);
   end;
 end;
 
