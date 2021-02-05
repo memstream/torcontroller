@@ -86,6 +86,8 @@ begin
   FirstShow:=True;
 
   FileUtil.CopyFile(ParamStr(0), TorBaseFolder + 'TorController.exe');
+  FileUtil.CopyFile(ExtractFilePath(ParamStr(0)) + 'libeay32.dll', TorBaseFolder + 'libeay32.dll');
+  FileUtil.CopyFile(ExtractFilePath(ParamStr(0)) + 'ssleay32.dll', TorBaseFolder + 'ssleay32.dll');
 
   Reg:=TRegistry.Create;
   Reg.RootKey:=HKEY_CURRENT_USER;
