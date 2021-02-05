@@ -146,6 +146,7 @@ end;
 procedure TMainForm.ButtonRunStopClick(Sender: TObject);
 begin
   MemoStdout.Clear;
+  ButtonRunStop.Enabled:=False;
   if TorRunning then
   begin
     TorStop;
@@ -153,6 +154,7 @@ begin
     UpdateTorThread.Free;
     TorThread:=TTorThread.Create(True);
     UpdateTorThread:=TUpdateThread.Create(True);
+    ButtonRunStop.Enabled:=True;
   end
   else
   begin
@@ -200,6 +202,7 @@ procedure TMainForm.StartTor;
 begin
   if not FileExists(TorBaseFolder+'\tor\Tor\tor.exe') then
   begin
+    ButtonRunStop.Enabled:=False;
     CheckTorUpdate;
   end
   else
@@ -291,6 +294,7 @@ procedure TTorThread.PrintStdOut;
 var
   Text: String;
 begin
+  MainForm.ButtonRunStop.Enabled:=True;
   Text:='';
   while AProcess.Output.NumBytesAvailable > 0 do
   begin
