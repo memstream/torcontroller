@@ -116,7 +116,9 @@ begin
   if Reg.ValueExists('TorController') then
   begin
     CheckBoxStartup.Checked:=True;
-    StartTor;
+
+    if not TorRunning then
+      StartTor;
   end;
 end;
 
