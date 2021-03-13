@@ -236,6 +236,7 @@ begin
     MainForm.LabelStatus.Caption:='Down';
     MainForm.LabelStatus.Font.Color:=RGBToColor(128, 0, 0);
   end;
+  MainForm.ButtonRunStop.Enabled:=True;
 end;
 
 procedure TUpdateStatusThread.Execute;
