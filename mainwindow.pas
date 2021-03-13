@@ -305,6 +305,7 @@ begin
     Text:=Text+Chr(AProcess.Output.ReadByte);
   end;
   MainForm.MemoStdout.Text:=MainForm.MemoStdout.Text+Text;
+  SendMessage(MainForm.MemoStdout.Handle, WM_VSCROLL, SB_BOTTOM, 0);
 end;
 
 procedure TTorThread.Execute;
